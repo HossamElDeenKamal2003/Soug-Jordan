@@ -23,7 +23,7 @@ const productSchema = new mongoose.Schema({
     
     },
     price: {
-        type: String,
+        type: Number,
     },
     condition:{
         type: String,
@@ -84,6 +84,18 @@ const productSchema = new mongoose.Schema({
     direction:{
         type: String
     },
+    adNumber: {
+        type: String
+    },
+    mileage:{
+        type: String
+    },
+    carRate:{
+        type: String
+    },
+    saleState:{
+        type: String
+    },
     // building
     numberOfrooms:{
         type: String
@@ -102,6 +114,9 @@ const productSchema = new mongoose.Schema({
     },
     mafrosha:{
         type: String
+    },
+    viewers: {
+        type: []
     },
     createdAt: {
         type: Date,

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage() })
+const upload = multer({ dest: 'uploads/' });
 // Import controller functions
 const {
     createproduct,
@@ -12,11 +12,19 @@ const {
     filterProducts,
     patchGlobalProperty,
     deleteProductFromFavourite,
-    deletePost
+    deletePost,
+    addFollow,
+    deleteFollow,
+    updatePrivacy,
+    handleUpload,
+    searchProducts
 } = require('../controller/productions');
 
+router.post('/follow', addFollow);
+router.delete('/follow', deleteFollow);
+router.post('/search/:id', searchProducts);
 // Route to create a product
-router.post('/create',upload.array('images', 5), createproduct);
+router.post('/create',handleUpload, createproduct);
 
 // Route to add product to favourites
 router.post('/favourite', addFavourite);
@@ -25,10 +33,11 @@ router.post('/favourite', addFavourite);
 router.get('/favourite/:id', myFavourite);
 
 // Route to get posts with favourite status
+
 router.get('/posts/:id', getPosts);
 
 // Route to get similar products based on category
-router.get('/similar/:id/:productId', getSimilarProductsByCategory);
+router.get('/similar/:userId/:id', getSimilarProductsByCategory);
 
 // Route to filter products based on filters and pagination
 router.post('/filter/:id', filterProducts);
@@ -41,5 +50,5 @@ router.delete('/favourite/:userId/:productId', deleteProductFromFavourite);
 
 // Route to delete a product
 router.delete('/delete/:id', deletePost);
-
+router.patch('/privacy', updatePrivacy);
 module.exports = router;
