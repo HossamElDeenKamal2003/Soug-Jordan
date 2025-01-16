@@ -101,11 +101,9 @@ const handleUpload = (req, res, next) => {
       // Create and save the product
       const production = new Production(productData);
       await production.save();
-  
+      const populatedProduction = await Production.findById(production._id).populate('userId', 'username email phoneNumber userFCMToken');
       // Emit real-time update if socket.io is configured
-      if (req.app.get('io')) {
-        req.app.get('io').emit('new-product', production);
-      }
+        io.emit('new-product', {products:populatedProduction});
   
       // Return success response
       return res.status(201).json({
@@ -172,7 +170,7 @@ const getPosts = async (req, res) => {
             .skip(skip)
             .limit(limit)
             .populate('userId', 'username email phoneNumber userFCMToken') // Populate user details
-            .lean(); // Convert Mongoose documents to plain objects
+            .lean().reverse();
 
         // Fetch the user's favourite products
         const favourites = await favouriteModel.find({ userId }).select('productId');
@@ -201,7 +199,7 @@ const getPosts = async (req, res) => {
 
         // Return the response with products, user data, and pagination details
         return res.status(200).json({
-            products: productsWithStatus.reverse(),
+            products: productsWithStatus,
             currentPage: page,
             totalPages: totalPages,
             totalProducts: totalProducts,
