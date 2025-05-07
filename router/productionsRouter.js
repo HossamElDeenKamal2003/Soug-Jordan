@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+// const upload = multer({ dest: 'uploads/' });
+const {
+    upload,
+    uploadFields
+ } = require('../middlewares/files');
 // Import controller functions
 const {
     createproduct,
@@ -17,29 +21,22 @@ const {
     deleteFollow,
     updatePrivacy,
     handleUpload,
-    searchProducts
+    searchProducts,
+    deleteImage,
+    addImagesToPost,
+    updatePostText
 } = require('../controller/productions');
-
+router.patch('/update-post/:id', updatePostText);
+router.delete('/delete-image/:id', deleteImage);
+router.post('/add-images/:id', upload.fields(uploadFields), addImagesToPost);
 router.post('/follow', addFollow);
 router.delete('/follow', deleteFollow);
 router.post('/search/:id', searchProducts);
-// Route to create a product
-router.post('/create',handleUpload, createproduct);
-
-// Route to add product to favourites
+router.post('/create', upload.fields(uploadFields), createproduct);
 router.post('/favourite', addFavourite);
-
-// Route to get user's favourite products
 router.get('/favourite/:id', myFavourite);
-
-// Route to get posts with favourite status
-
 router.get('/posts/:id', getPosts);
-
-// Route to get similar products based on category
 router.get('/similar/:userId/:id', getSimilarProductsByCategory);
-
-// Route to filter products based on filters and pagination
 router.post('/filter/:id', filterProducts);
 
 // Route to update a global property for all products

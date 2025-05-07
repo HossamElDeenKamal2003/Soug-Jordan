@@ -5,7 +5,7 @@ const favouriteSchema = new mongoose.Schema({
     },
     productId: {
         type: String,
-        ref: 'products'
+        ref: 'Product'
     }
 });
 

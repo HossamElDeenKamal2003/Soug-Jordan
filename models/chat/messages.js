@@ -13,6 +13,10 @@ const messageSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId, // Change to ObjectId
         ref: 'Conversation' // This will reference the Conversation model
     },
+    title: {
+        type: Boolean,
+        default: false
+    },
     senderId: {
         type: mongoose.Schema.Types.ObjectId, // Change to ObjectId
         ref: 'User'
@@ -22,6 +26,12 @@ const messageSchema = new mongoose.Schema({
         ref: 'User'
     },
     text: {
+        type: String
+    },
+    imageUrl: {
+        type: String
+    },
+    description: {
         type: String
     },
     createdAt: {

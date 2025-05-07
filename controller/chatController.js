@@ -179,7 +179,7 @@ const getConversationById = async (req, res, next) => {
 const sendMessage = async (req, res, next) => {
     try {
         const { id: conversationId } = req.params;
-        const { sender: senderId, text, receiverId } = req.body;
+        const { sender: senderId, text, receiverId, title, imageUrl, description } = req.body;
 
         if (!conversationId || !senderId || !text || !receiverId) {
             throw createError(400, "Missing required fields.");
@@ -188,7 +188,10 @@ const sendMessage = async (req, res, next) => {
         const message = new Message({
             conversationId,
             senderId,
+            title: title || false,
             receiverId,
+            imageUrl,
+            description,
             text
         });
 

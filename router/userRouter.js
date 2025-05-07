@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const upload = require('../middlewares/files');
+// const upload = require('../middlewares/files');
 const {
     register,
     login,
@@ -17,19 +17,20 @@ const {
     handleUpload,
     updateCoverImage,
     updateProfileImage,
+    resetPassword,
+    verifyOtp,
     handleSingleUpload
 } = require('../controller/userController'); // Ensure file name case matches
-
+const { upload } = require('../middlewares/files');
 router.post(
     '/register',
-    handleUpload,
     // handleSingleUpload('coverImage'),
     register
 );
-router.patch('/update-profile-image',handleSingleUpload('profileImage'), updateProfileImage);
+router.patch('/update-profile-image',upload.single('profileImage'), updateProfileImage);
 
 // Update Cover Image
-router.patch('/update-cover-image', handleSingleUpload('coverImage'), updateCoverImage);
+router.patch('/update-cover-image', upload.single('coverImage'), updateCoverImage);
 router.post('/login', login);
 router.patch('/update-email', updateEmail);
 router.patch('/update-phone-number', updatePhoneNumber); // Consistent route name
@@ -41,4 +42,6 @@ router.post('/updateToken/:id', updateToken);
 router.post('/addFollow', addFollow);
 router.get('/getFollow/:id', getFollow);
 router.delete('/deleteFollow', deleteFollow);
+router.post('/resetPassword', resetPassword);
+router.post('/verify', verifyOtp);
 module.exports = router;

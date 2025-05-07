@@ -40,7 +40,7 @@ const getUserMessages = async (req, res) => {
         const messages = await admin.find({ userId }) // Fetch messages by userId
             .populate('userId', 'username email phoneNumber') // Populate user details
             .sort({ createdAt: -1 }); // Sort messages by created date (latest first)
-
+ 
         if (messages.length === 0) {
             return res.status(404).json({ message: 'No messages found for this user.' });
         }
@@ -50,8 +50,6 @@ const getUserMessages = async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch user messages.', details: error.message });
     }
 };
-
-
 
 module.exports = {
     sendMessage,

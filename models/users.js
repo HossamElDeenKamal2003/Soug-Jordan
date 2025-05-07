@@ -33,10 +33,16 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    verified: {
+        type: Boolean,
+        default: false
+    },
+    otp: {
+        type: String,
+        default: ""
+    }
 
 });
-
-
 
 const User = mongoose.model('User', userSchema);
 

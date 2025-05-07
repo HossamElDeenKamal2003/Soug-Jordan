@@ -6,15 +6,16 @@ const replySchema = require('../models/reply');
 const Replay = require('../models/reply');
 const {productNotification} = require('../firebase');
 const follow = require('../models/follow');
+const Notification = require('../models/notifications');
 // Create a comment
-const createComment = async function (req, res) {
+const createComment = async (req, res) => {
     try {
-        const { postId, commenterId, content, parentId } = req.body;
+        const { userId, postId, commenterId, content, parentId } = req.body;
 
-        // Validate user
+        // Validate commenter
         const user = await User.findById(commenterId);
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ message: 'Commenter not found' });
         }
 
         // Validate post
@@ -23,16 +24,16 @@ const createComment = async function (req, res) {
             return res.status(404).json({ message: 'Post not found' });
         }
 
-        // If replying to a comment, validate the parent comment
+        // Validate parent comment if replying to a comment
         if (parentId) {
             const parentComment = await Comment.findById(parentId);
             if (!parentComment) {
                 return res.status(404).json({ message: 'Parent comment not found' });
             }
         }
-
-        // Save the new comment
+        // Create and save new comment
         const newComment = new Comment({
+            userId,
             postId,
             parentId: parentId || null,
             commenterId: user._id,
@@ -42,46 +43,60 @@ const createComment = async function (req, res) {
 
         const savedComment = await newComment.save();
 
-        // Retrieve all followers of the post
-        const followers = await follow.find({ postId }).populate('userId', 'fcmToken'); // Assuming users have `fcmToken`
-
-        // Send notifications to all followers
+        // Notify followers of the post
+        const followers = await follow.find({ postId }).populate('userId', 'username profileImage userFCMToken');
         const notificationTitle = 'New Comment on a Post You Follow!';
         const notificationBody = `${user.username} commented: "${content}"`;
 
-        for (const follower of followers) {
-            const followerUser = follower.userId; // Populated user object
-
-            // Check if the follower has an FCM token
-            if (followerUser && followerUser.userFCMToken) {
-                const message = {
-                    title: notificationTitle,
-                    body: notificationBody,
-                };
-
-                // Send notification via Firebase
+        // Send notifications via FCM
+        const notificationPromises = followers.map(async (follower) => {
+            const followerUser = follower.userId; 
+            if (followerUser?.userFCMToken) {
+                const message = { title: notificationTitle, body: notificationBody };
                 try {
                     await productNotification(followerUser.userFCMToken, message, postId);
                 } catch (error) {
                     console.error(`Failed to send notification to user ${followerUser._id}:`, error.message);
                 }
-
-                // Store the notification in the database
-                const notification = new Notification({
-                    userId: followerUser._id,
-                    title: notificationTitle,
-                    postId: postId,
-                    body: notificationBody,
-                    type: 'comment',
-                });
-
-                await notification.save();
             }
-        }
-        res.status(200).json({ savedComment, user });
+        });
+
+        // Save the notification to the database
+        const notification = new Notification({
+            userId,
+            title: notificationTitle,
+            postId,
+            body: notificationBody,
+            type: 'comment',
+        });
+
+        await Promise.all([...notificationPromises, notification.save()]);
+
+        // Send response
+        res.status(201).json({ message: 'Comment created successfully', comment: savedComment });
+
     } catch (error) {
         console.error('Error creating comment:', error);
         res.status(500).json({ message: 'Error creating comment', error: error.message });
+    }
+};
+
+const getNotification = async (req, res) => {
+    const userId = req.params.id;
+    try {
+        // Fetch notifications for the user and populate commenter details and postId
+        const notifications = await Notification.find({ userId })
+            .sort({ createdAt: -1 })
+            .populate({
+                path: 'userId', // Populate userId (commenter data)
+                select: 'username profileImage', // Include specific fields
+            });
+
+        // Return notifications along with user and postId details
+        res.status(200).json({ notifications });
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -150,5 +165,6 @@ const addReplyToComment = async function(req, res) {
 module.exports = {
     createComment,
     getCommentsByPostId,
-    addReplyToComment
+    addReplyToComment,
+    getNotification
 };

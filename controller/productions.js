@@ -5,6 +5,7 @@ const favouriteModel = require('../models/favouriteModel');
 const followModel = require("../models/follow");
 const multer = require('multer');
 const io = require('../server');
+const productsAr = require('../models/productions/productsAr');
 // Create Product
 const upload = require('../middlewares/files');
 const handleUpload = (req, res, next) => {
@@ -33,7 +34,6 @@ const handleUpload = (req, res, next) => {
       const formData = {
         ...req.body,
         price: req.body.price ? parseFloat(req.body.price) : undefined,
-        mileage: req.body.mileage ? parseFloat(req.body.mileage) : undefined,
         numberOfrooms: req.body.numberOfrooms ? parseInt(req.body.numberOfrooms) : undefined,
         numberOfbathrooms: req.body.numberOfbathrooms ? parseInt(req.body.numberOfbathrooms) : undefined,
         buildingSpace: req.body.buildingSpace ? parseFloat(req.body.buildingSpace) : undefined,
@@ -43,21 +43,43 @@ const handleUpload = (req, res, next) => {
         global: req.body.global === 'true',
         mafrosha: req.body.mafrosha === 'true',
         special: req.body.special === 'true',
+        ArLocation: req.body.ArLocation || undefined,
+        metaCategory: req.body.metaCategory || undefined,
+        ArmetaLocation: req.body.ArmetaLocation || undefined,
+          floorOption: req.body.floorOption || undefined,
+          arDetails: req.body.arDetails || undefined,
+          buildingArea: req.body.buildingArea ? parseFloat(req.body.buildingArea) : undefined,
+          landArea: req.body.landArea ? parseFloat(req.body.landArea) : undefined,
+          unit: req.body.unit || undefined,
+          mileage: req.body.mileage ? parseFloat(req.body.mileage) : (
+              req.body.millage ? parseFloat(req.body.millage) : undefined
+          ),
+          nearTo: req.body.nearTo ? JSON.parse(req.body.nearTo) : [],
+
       };
-  
-      // Validate required fields
+        // Validate required fields
       const requiredFields = ['userId', 'title', 'description', 'content'];
       const missingFields = requiredFields.filter(field => !formData[field] || String(formData[field]).trim() === '');
-      
+  
       if (missingFields.length > 0) {
         return res.status(400).json({
           message: 'Missing required fields',
-          fields: missingFields
+          fields: missingFields,
         });
       }
   
-      // Extract image URLs from uploaded files
-      const images = req.files ? req.files.map(file => file.location) : [];
+      // Extract image URLs from uploaded files in parallel
+      const images = [];
+      if (req.files) {
+        // Create an array of promises for image uploads
+        const uploadPromises = Object.keys(req.files).map(async (fieldName) => {
+          const file = req.files[fieldName][0];
+          images.push(file.location); // Push the image URL to the images array
+        });
+  
+        // Wait for all uploads to complete
+        await Promise.all(uploadPromises);
+      }
   
       // Create product object with all possible fields
       const productData = {
@@ -81,7 +103,7 @@ const handleUpload = (req, res, next) => {
         modelCar: formData.modelCar,
         special: formData.special,
         images,
-        global: formData.global,
+        global: true,
         viewers: formData.viewers,
         carDetails: formData.carDetails,
         landTo: formData.landTo,
@@ -96,30 +118,42 @@ const handleUpload = (req, res, next) => {
         buildingFloor: formData.buildingFloor,
         buildingAge: formData.buildingAge,
         mafrosha: formData.mafrosha,
+        ArLocation: formData.ArLocation,
+        metaLocation: formData.metaLocation,
+        ArmetaLocation: formData.ArmetaLocation,
+          metaLocation: formData.metaLocation,
+          unit: formData.unit,
+          floorOption: formData.floorOption,
+          arDetails: formData.arDetails,
+          buildingArea: formData.buildingArea,
+          landArea: formData.landArea,
       };
   
       // Create and save the product
-      const production = new Production(productData);
-      await production.save();
-      const populatedProduction = await Production.findById(production._id).populate('userId', 'username email phoneNumber userFCMToken');
+      const product = new Production(productData);
+      await product.save();
+  
+      // Populate the userId field for the response
+      const populatedProduct = await Production.findById(product._id).populate('userId', 'username email phoneNumber userFCMToken');
+  
       // Emit real-time update if socket.io is configured
-        io.emit('new-product', {products:populatedProduction});
-  
+      if (io) {
+        io.emit('new-product', { product: populatedProduct });
+      }
+
       // Return success response
-      return res.status(201).json({
+      res.status(201).json({
         message: 'Product created successfully',
-        data: production
+        data: populatedProduct,
       });
-  
     } catch (error) {
       console.error('Error creating product:', error);
-      return res.status(500).json({
+      res.status(500).json({
         message: 'Internal Server Error',
-        error: error.message
+        error: error.message,
       });
     }
   };
-  
 
 // Add to Favourite
 const addFavourite = async (req, res) => {
@@ -166,11 +200,13 @@ const getPosts = async (req, res) => {
         }
 
         // Fetch products with global: true, apply pagination, and populate user data
+        // Fetch products with global: true, apply pagination, and populate user data, sorted in descending order
         const products = await Production.find({ global: true })
-            .skip(skip)
-            .limit(limit)
-            .populate('userId', 'username email phoneNumber userFCMToken') // Populate user details
-            .lean().reverse();
+        .skip(skip)
+        .limit(limit)
+        .populate('userId', 'username email phoneNumber userFCMToken') // Populate user details
+        .sort({ _id: -1 })  // Sort by _id in descending order
+        .lean(); // Lean to return plain objects
 
         // Fetch the user's favourite products
         const favourites = await favouriteModel.find({ userId }).select('productId');
@@ -356,7 +392,7 @@ const searchProducts = async (req, res) => {
         const totalPages = Math.ceil(totalProducts / limit);
 
         return res.status(200).json({
-            products: productsWithFavouriteStatus.reverse(),
+            products: productsWithFavouriteStatus,
             currentPage: pageNumber,
             totalPages: totalPages,
             totalProducts: totalProducts,
@@ -379,87 +415,36 @@ const filterProducts = async (req, res) => {
         const pageNumber = parseInt(page);
         const limit = parseInt(pageSize);
 
+        // Validate pagination parameters
+        if (isNaN(pageNumber) || isNaN(limit) || pageNumber < 1 || limit < 1) {
+            return res.status(400).json({ message: 'Invalid pagination parameters' });
+        }
+
         // Calculate skip for pagination
         const skip = (pageNumber - 1) * limit;
 
         // Build the query dynamically based on the filters provided
-        const query = {};
-
-        // Dynamically add filters to the query object
-        if (filters.category) {
-            query.category = filters.category;
-        }
-        if (filters.price) {
-            query.price = { $gte: filters.price.min, $lte: filters.price.max };
-        }
-        if (filters.location) {
-            query.location = { $regex: filters.location, $options: 'i' };
-        }
-        if (filters.condition) {
-            query.condition = filters.condition;
-        }
-        if (filters.carType) {
-            query.carType = filters.carType;
-        }
-        if (filters.modelCar) {
-            query.modelCar = filters.modelCar; // Exact match
-        }
-        if (filters.metaCategory) {
-            query.metaCategory = filters.metaCategory; // Exact match
-        }
-        if (filters.gearType) {
-            query.gearType = filters.gearType;
-        }
-        if (filters.fuelType) {
-            query.fuelType = filters.fuelType;
-        }
-        if (filters.is40W !== undefined) {
-            query.is40W = filters.is40W;
-        }
-        if (filters.global !== undefined) {
-            query.global = filters.global;
-        }
-        if (filters.viewers !== undefined) {
-            query.viewers = { $gte: filters.viewers };
-        }
-        if (filters.owner) {
-            query.owner = filters.owner; // Exact match
-        }
-        if (filters.numberOfrooms !== undefined) {
-            query.numberOfrooms = filters.numberOfrooms;
-        }
-        if(filters.containImages === true){
-            query.images = { $exists: true, $ne: [] };
-        }
-        if (filters.numberOfbathrooms !== undefined) {
-            query.numberOfbathrooms = filters.numberOfbathrooms;
-        }
-        if (filters.buildingSpace !== undefined) {
-            query.buildingSpace = { $gte: filters.buildingSpace };
-        }
-        if (filters.buildingFloor !== undefined) {
-            query.buildingFloor = filters.buildingFloor;
-        }
-        if (filters.buildingAge !== undefined) {
-            query.buildingAge = filters.buildingAge;
-        }
+        const query = buildQuery(filters);
 
         // Fetch the filtered products with pagination
         const products = await Production.find(query)
+            .sort({ createdAt: -1 }) // Sort by newest first
             .skip(skip)
-            .populate('userId', 'username email phoneNumber userFCMToken') // Fetch user details
+            .populate('userId', 'username email phoneNumber userFCMToken')
             .limit(limit);
 
         // Fetch the favourite products of the user
         const favourites = await favouriteModel.find({ userId }).select('productId');
 
         // Extract the product IDs from the favourites
-        const favouriteProductIds = favourites.map(fav => fav.productId.toString());
+        const favouriteProductIds = favourites
+            .filter(fav => fav.productId) // Ensure productId exists
+            .map(fav => fav.productId.toString());
 
         // Add `isFavourite` field to each product
         const productsWithFavouriteStatus = products.map(product => ({
             ...product.toObject(),
-            isFavourite: favouriteProductIds.includes(product._id.toString())
+            isFavourite: favouriteProductIds.includes(product._id.toString()),
         }));
 
         // Get the total number of products that match the filters to calculate total pages
@@ -469,21 +454,61 @@ const filterProducts = async (req, res) => {
         const totalPages = Math.ceil(totalProducts / limit);
 
         return res.status(200).json({
-            products: productsWithFavouriteStatus.reverse(),
+            products: productsWithFavouriteStatus,
             currentPage: pageNumber,
             totalPages: totalPages,
             totalProducts: totalProducts,
-            pageSize: limit
+            pageSize: limit,
         });
     } catch (error) {
         console.error('Error fetching filtered products:', error);
-        return res.status(500).json({
-            message: 'Failed to retrieve filtered products',
-            error: error.message
-        });
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ message: 'Invalid input', error: error.message });
+        }
+        return res.status(500).json({ message: 'Internal server error', error: error.message });
     }
 };
 
+// Helper function to build the query dynamically
+const buildQuery = (filters) => {
+    const query = {};
+
+    // Dynamically add filters to the query object
+    const filterMappings = {
+        category: (value) => ({ category: value }),
+        price: (value) => ({ price: { $gte: value.min, $lte: value.max } }),
+        location: (value) => ({ location: { $regex: value, $options: 'i' } }),
+        condition: (value) => ({ condition: value }),
+        carType: (value) => ({ carType: value }),
+        modelCar: (value) => ({ modelCar: { $regex: value, $options: 'i' } }),
+        metaCategory: (value) => ({ metaCategory: { $regex: value, $options: 'i' } }),
+        gearType: (value) => ({ gearType: value }),
+        fuelType: (value) => ({ fuelType: value }),
+        is40W: (value) => ({ is40W: value }),
+        global: (value) => ({ global: value }),
+        viewers: (value) => ({ viewers: { $gte: value } }),
+        owner: (value) => ({ owner: value }),
+        numberOfrooms: (value) => ({ numberOfrooms: value }),
+        numberOfbathrooms: (value) => ({ numberOfbathrooms: value }),
+        buildingSpace: (value) => ({ buildingSpace: { $gte: value } }),
+        buildingFloor: (value) => ({ buildingFloor: value }),
+        buildingAge: (value) => ({ buildingAge: value }),
+        metaLocation: (value) => ({ metaLocation: value }),
+        containImages: (value) => (value ? { images: { $exists: true, $ne: [] } } : {}),
+    };
+
+    // Apply filters dynamically
+    for (const [key, value] of Object.entries(filters)) {
+        if (value !== undefined && value !== null && value !== '') {
+            const filterFunction = filterMappings[key];
+            if (filterFunction) {
+                Object.assign(query, filterFunction(value));
+            }
+        }
+    }
+
+    return query;
+};
 const patchGlobalProperty = async (req, res) => {
     const { property, value } = req.body; // property name and its new value
 
@@ -600,7 +625,117 @@ const updatePrivacy = async (req, res) => {
     }
 };
 
+const updatePostText = async (req, res) => {
+    const { id } = req.params; // Corrected this line
+    const updates = req.body;
+    try {
+        const updatePost = await Production.findByIdAndUpdate(
+            id,
+            { $set: updates },
+            { new: true }
+        );
+        if (!updatePost) {
+            return res.status(400).json({ message: "Failed To Update Product" });
+        }
+        return res.status(200).json({ message: "Post Updated Successfully", post: updatePost });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: error.message });
+    }
+};
 
+require('dotenv').config();
+
+const AWS = require('aws-sdk');
+AWS.config.update({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION,
+});
+const s3 = new AWS.S3();
+const deleteImage = async (req, res) => {
+    const { id: postId } = req.params; // Destructure postId from URL parameters
+    const { index } = req.body; // Get the index of the image to delete from the request body
+  
+    try {
+      // Find the post by ID
+      const post = await Production.findById(postId);
+      if (!post) {
+        return res.status(404).json({ message: 'Post not found' });
+      }
+  
+      // Validate the image index
+      if (index < 0 || index >= post.images.length) {
+        return res.status(400).json({ message: 'Invalid image index' });
+      }
+  
+      // Get the image URL to delete from S3
+      const imageUrl = post.images[index];
+  
+      // Extract the S3 object key from the URL
+      const urlParts = imageUrl.split('/');
+      const key = urlParts.slice(3).join('/'); // Extract the key correctly from the URL
+  
+      // Delete the image from S3
+      const params = {
+        Bucket: process.env.AWS_BUCKET_NAME, // Your S3 bucket name
+        Key: key, // The key of the object to delete
+      };
+      await s3.deleteObject(params).promise();
+  
+      // Remove the image from the post's images array
+      post.images.splice(index, 1);
+  
+      // Save the updated post
+      await post.save();
+  
+      res.status(200).json({ message: 'Image deleted successfully', post });
+    } catch (error) {
+      console.error('Error deleting image:', error.message);
+      res.status(500).json({ message: 'Failed to delete image', error: error.message });
+    }
+  };
+
+  const addImagesToPost = async (req, res) => {
+    const { id: postId } = req.params; // Destructure postId from URL parameters
+    const images = req.files; // Get the uploaded files from req.files
+  
+    console.log('Uploaded Files:', images); // Log the uploaded files for debugging
+  
+    try {
+      // Validate if files were uploaded
+      if (!images || Object.keys(images).length === 0) {
+        return res.status(400).json({ message: 'No files uploaded' });
+      }
+  
+      // Find the post by ID
+      const post = await Production.findById(postId);
+      if (!post) {
+        return res.status(404).json({ message: 'Post not found' });
+      }
+  
+      // Extract image URLs from uploaded files
+      const imageLocations = [];
+      for (const fieldName in images) {
+        if (images[fieldName]) {
+          images[fieldName].forEach(file => {
+            imageLocations.push(file.location); // Assuming file.location contains the S3 URL
+          });
+        }
+      }
+  
+      // Add the new image URLs to the post's images array
+      post.images.push(...imageLocations); // Spread to push each location individually
+  
+      // Save the updated post
+      await post.save();
+  
+      res.status(200).json({ message: 'Images added successfully', post });
+    } catch (error) {
+      console.error('Error adding images:', error.message);
+      res.status(500).json({ message: 'Failed to add images', error: error.message });
+    }
+  };
 // Export Controllers
 module.exports = {
     createproduct,
@@ -616,5 +751,8 @@ module.exports = {
     deleteFollow,
     updatePrivacy,
     handleUpload,
-    searchProducts
+    searchProducts,
+    updatePostText,
+    deleteImage,
+    addImagesToPost
 };

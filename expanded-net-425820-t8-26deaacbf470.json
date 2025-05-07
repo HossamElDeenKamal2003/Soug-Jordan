@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "expanded-net-425820-t8",
+  "private_key_id": "26deaacbf470c2458589f2c035af9fc6050b5709",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDANxeFjz33jD1S\nrulkoU4GG/qnaoCBKX9ifyt2ELgSNW+TnbHtjrUtGJcsp7/xZ2h2EqICbR23ojKO\n38lhA1PC2prsYbYv0dgEYtluZplY68sdLFZeyswsstwrCxUXspkfvQahj7zPmFks\nJT8FLhVz5tY1IHG9BAiMtvbEf5PMS4JS50Y81FQcq0JOwXsqer36DHUJq9HLITmx\nwTRbGQ5it8J0LoeHzk829m7qIplPD5g3MDY9YTs+CpaZQsNHk/7yE+OS/1gCkCJb\nvEyLCq3y3wG+pPdaMvXJBXgGLSz2XBbmoCbqHjfr5VnEwFgp6BV3NS3RT6wZEZU/\neZrw9WURAgMBAAECggEAAo14vtRSfVlxGF+sR82Al2zYXPrOxBMErGPbSZEam1tM\nT7M2FrKLeL2ChxxJ3JnZSvV1Df/cTNZW7ODPRX420Y1M+2X8y7vHWPTlxaU6f3Ik\n22P9raVB0Dd73F0kUDvrSVRIT0L1E0ixqSLBfdRz19CGow6llAixWF+2/TsN1RZc\nZOFuAVcdj8zgeY4hg49k6nuZ1nnN69PyXwjTquI0ldMF2/oi2dodnDnITbmtUohl\n4fSirvWsR63p6bKnuqneOZQij4ZgT9CI7h/t2w2Q4djlHzdd1LzAJE8qAAAc8fd2\nJ2gZlVflDpzOCPxXc4obn8qbYPgLl/ZjdwoerKhaQQKBgQDmzOEZnx+EJnjbwd4Q\noGka1oopfLO9TGXaw4WqgFQwyAgS1f1RT9WmnjMA7DKb6tzcq3rd8vTKM2lUVTJt\nXLvQKaK4vRPQSrE3a8as9jBiVWLkqVyZzGTb6bIIiFF6z5WqZ+4K4BwGd5OY3B0c\nAXleBW15QSZ4LluyICkP3nuECQKBgQDVM7d58ct9bl8Han3q4BU5FpxhGS7elFdN\n+VoFSFMXcW0CXo+ubWqmJKia8a/zhmaTPhlcVOhmcmeH/kiWPYSuA6eK00qV4P9Z\nJNkY9/O1YlSDBNz9iR+2JCmsuPJ1b+V4GmrVHnUuqGw7VSmgZYwVG9K8Cpg46jm7\ne8v4XJdqyQKBgQCYgLgcXfBNOb6SNr+s7NGGUkxorWV2p4yFyLwBtVnsAcCT8aG4\noK/jsJSy/19RdxcJGKXPEkJ9eQsYFlODv8q5+Uj0GLuG3lPK8wQMNYAy+Yim3uG5\nHj1msjxZNvnf1FpohtPbi8n42/pC/u6dGrw/TAbSICJzNu6P/IAlZDTpQQKBgQCj\nHqR8WnFUkIOIiwO4FqZmPVR8PeZMSbbaY7NqY0GfqBq9O1g3HmQApf+SPORgMC5+\n7X491IDTESkBNZ6XxI2lDgq7/pkMP09fBwBLSDpgRtFeRPRHzwhCNTzld8OZ8njh\nAWVHlbwWbKoSY0AsBkW9SMJdOMXqldqCBV+zsDPxcQKBgQDgMLMuG8Sz2+/G8732\nNXFf4jKvQZaH9m1s/4qFuVvn3+K6+vaUwXt4pdognkXPWTKalMgEJLPXIpFYqIQu\ne0GgBP+Lhm5VHotNXCPJB7V3KkTl6ikCMh147CHaViotX4evoXphZSR0QeLem0Vy\nSEvZhT9RMs5aH7SHRZ7JYlOAsw==\n-----END PRIVATE KEY-----\n",
+  "client_email": "souq-jordan@expanded-net-425820-t8.iam.gserviceaccount.com",
+  "client_id": "109214081211853528848",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/souq-jordan%40expanded-net-425820-t8.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
