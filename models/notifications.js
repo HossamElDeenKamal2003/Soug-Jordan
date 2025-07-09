@@ -25,6 +25,10 @@ const notificationSchema = new mongoose.Schema({
     createdAt: {
         type: String, // Store as a formatted string
     },
+    isSeen: {
+        type: Boolean,
+        default: false
+    }
 });
 
 // Middleware to set createdAt with Cairo time zone

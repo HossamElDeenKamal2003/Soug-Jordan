@@ -4,7 +4,7 @@ const Post = require('../models/productions/production');
 const User = require('../models/users');
 const replySchema = require('../models/reply');
 const Replay = require('../models/reply');
-const {productNotification} = require('../firebase');
+const {sendNotification} = require('../firebase');
 const follow = require('../models/follow');
 const Notification = require('../models/notifications');
 // Create a comment
@@ -18,8 +18,8 @@ const createComment = async (req, res) => {
             return res.status(404).json({ message: 'Commenter not found' });
         }
 
-        // Validate post
-        const post = await Post.findById(postId);
+        // Validate post and get post owner
+        const post = await Post.findById(postId).populate('userId', 'username userFCMToken');
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
         }
@@ -31,7 +31,8 @@ const createComment = async (req, res) => {
                 return res.status(404).json({ message: 'Parent comment not found' });
             }
         }
-        // Create and save new comment
+
+        // Create and save the new comment
         const newComment = new Comment({
             userId,
             postId,
@@ -43,41 +44,90 @@ const createComment = async (req, res) => {
 
         const savedComment = await newComment.save();
 
-        // Notify followers of the post
-        const followers = await follow.find({ postId }).populate('userId', 'username profileImage userFCMToken');
-        const notificationTitle = 'New Comment on a Post You Follow!';
-        const notificationBody = `${user.username} commented: "${content}"`;
+        // Notify the post owner (if it's not the commenter themselves)
+        const notificationPromises = [];
 
-        // Send notifications via FCM
-        const notificationPromises = followers.map(async (follower) => {
-            const followerUser = follower.userId; 
-            if (followerUser?.userFCMToken) {
-                const message = { title: notificationTitle, body: notificationBody };
-                try {
-                    await productNotification(followerUser.userFCMToken, message, postId);
-                } catch (error) {
-                    console.error(`Failed to send notification to user ${followerUser._id}:`, error.message);
-                }
+        if (post.userId._id.toString() !== commenterId.toString()) {
+            const ownerNotificationTitle = 'New Comment on Your Post!';
+            const ownerNotificationBody = `${user.username} commented: "${content}"`;
+
+            // Send FCM notification to post owner if they have a token
+            if (post.userId.userFCMToken) {
+                notificationPromises.push(
+                    sendNotification(post.userId.userFCMToken, {
+                        title: ownerNotificationTitle,
+                        body: ownerNotificationBody
+                    }, postId).catch(error => {
+                        console.error(`Failed to send notification to post owner ${post.userId._id}:`, error.message);
+                    })
+                );
             }
-        });
 
-        // Save the notification to the database
-        const notification = new Notification({
-            userId,
-            title: notificationTitle,
+            // Save notification to database for post owner
+            notificationPromises.push(
+                new Notification({
+                    userId: post.userId._id,
+                    title: ownerNotificationTitle,
+                    postId,
+                    body: ownerNotificationBody,
+                    type: 'comment',
+                    isSeen: true,
+                    triggeredBy: commenterId
+                }).save()
+            );
+        }
+
+        // Notify followers of the post (excluding the post owner and commenter)
+        const followers = await follow.find({
             postId,
-            body: notificationBody,
-            type: 'comment',
+            userId: { $nin: [post.userId._id, commenterId] } // Exclude owner and commenter
+        }).populate('userId', 'username profileImage userFCMToken');
+
+        const followerNotificationTitle = 'New Comment on a Post You Follow!';
+        const followerNotificationBody = `${user.username} commented: "${content}"`;
+
+        // Send notifications to followers via FCM
+        followers.forEach(follower => {
+            const followerUser = follower.userId;
+            if (followerUser?.userFCMToken) {
+                notificationPromises.push(
+                    sendNotification(followerUser.userFCMToken, {
+                        title: followerNotificationTitle,
+                        body: followerNotificationBody
+                    }, postId).catch(error => {
+                        console.error(`Failed to send notification to follower ${followerUser._id}:`, error.message);
+                    })
+                );
+            }
+
+            // Save notification to database for followers
+            notificationPromises.push(
+                new Notification({
+                    userId: followerUser._id,
+                    title: followerNotificationTitle,
+                    postId,
+                    body: followerNotificationBody,
+                    type: 'comment',
+                    triggeredBy: commenterId
+                }).save()
+            );
         });
 
-        await Promise.all([...notificationPromises, notification.save()]);
+        // Wait for all notifications to complete
+        await Promise.all(notificationPromises);
 
         // Send response
-        res.status(201).json({ message: 'Comment created successfully', comment: savedComment });
+        res.status(201).json({
+            message: 'Comment created successfully',
+            comment: savedComment
+        });
 
     } catch (error) {
         console.error('Error creating comment:', error);
-        res.status(500).json({ message: 'Error creating comment', error: error.message });
+        res.status(500).json({
+            message: 'Error creating comment',
+            error: error.message
+        });
     }
 };
 

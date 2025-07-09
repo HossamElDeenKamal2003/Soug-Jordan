@@ -59,28 +59,31 @@ app.get('/productDetails/:productId', (req, res) => {
       </html>
     `);
     } else if (isiOS) {
-        // iOS Universal Link
         res.send(`
-      <html>
-      <head>
-        <meta property="al:ios:url" content="jordensouqq://productDetails/${productId}">
-        <meta property="al:ios:app_store_id" content="YOUR_APP_STORE_ID">
-        <meta property="al:ios:app_name" content="Your App Name">
-        <script>
-          window.location.href = "https://frontendsouqjordan.vercel.app/details/${productId}";
-        </script>
-      </head>
-      <body>
-        <a href="https://backend.jordan-souq.com/productDetails/${productId}">
-          Open in App
-        </a>
-      </body>
-      </html>
-    `);
-    } else {
-        res.redirect(`https://frontendsouqjordan.vercel.app/details/${productId}`);
+  <html>
+  <head>
+    <meta property="al:ios:url" content="jordensouqqq://productDetails/${productId}">
+    <meta property="al:ios:app_store_id" content="738HFR9XNT">
+    <meta property="al:ios:app_name" content="Jordensouq">
+    <meta property="al:web:url" content="https://backend.jordan-souq.com/productDetails/${productId}">
+    <script>
+      // Try universal link first
+      window.location.href = "https://backend.jordan-souq.com/productDetails/${productId}";
+      setTimeout(function() {
+        // Fallback to website if app doesn't open
+        window.location.href = "https://frontendsouqjordan.vercel.app/details/${productId}";
+      }, 500);
+    </script>
+  </head>
+  <body>
+    <a href="https://backend.jordan-souq.com/productDetails/${productId}">
+      Open in App
+    </a>
+  </body>
+  </html>
+`);
     }
-});
+})
 
 // Initialize HTTP server and Socket.IO
 const server = http.createServer(app);
@@ -113,14 +116,13 @@ const productions = require('./router/productionsRouter');
 const comments = require('./router/comments');
 const conversationRoutes = require('./router/chatRouter');
 const admin = require('./router/adminRouter');
-
+const { setupChatSockets } = require('./controller/chatController');
+setupChatSockets(io);
 app.use('/api/conversations', conversationRoutes);
 app.use('/users', users);
 app.use('/product', productions);
 app.use('/comments', comments);
 app.use('/admin', admin);
-
-// Basic Route to confirm server is running
 app.get('/', (req, res) => {
     res.send('Express Server Running');
 });
@@ -128,13 +130,15 @@ app.get('/', (req, res) => {
 // Example of sending the app download links (android and ios)
 app.get('/invite', async (req, res) => {
     try {
-        const androidLink = "http://A7A-android.com";
-        const iosLink = "http://A7A-ios.com";
-        const bankAccount = "892038921";
-        const profit = .1;
+        const androidLink = "https://play.google.com/store/apps/details?id=com.Shehab.Jordensouqq";
+        const iosLink = "https://apps.apple.com/us/app/%D8%B3%D9%88%D9%82-%D8%A7%D9%84%D8%A3%D8%B1%D8%AF%D9%86/id6744337417?l=ar";
+        const bankAccount = "0948108510400004";
+        const iban = "0670000948108510400004";
+        const click = "00797185955";
+        const profit = .01;
         const bankName = "AlAhly";
         const display = true;
-        res.status(200).json({ android: androidLink, ios: iosLink, bankAccount: bankAccount, profit: profit, bankName: bankName, display: display });
+        res.status(200).json({ android: androidLink, ios: iosLink, bankAccount: bankAccount, profit: profit, iban: iban, click: click, bankName: bankName, display: display });
     } catch (error) {
         console.log(error);
         res.status(500).json({ message: error.message });
@@ -148,7 +152,6 @@ app.get('/invite', async (req, res) => {
 //         let conversation = await Conversation.findOne({
 //             participants: { $all: participants, $size: participants.length }
 //         });
-//
 //         if (!conversation) {
 //             conversation = new Conversation({ participants });
 //             await conversation.save();
@@ -195,6 +198,50 @@ app.get('/notification/:id', async (req, res) => {
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: error.message });
+    }
+});
+
+app.patch('/:userId/:notificationId', async (req, res) => {
+    const { userId, notificationId } = req.params;
+
+    try {
+        const notification2 = await notification.findOneAndUpdate(
+            { _id: notificationId, userId: userId },
+            { isSeen: true },
+            { new: true }
+        );
+
+        if (!notification2) {
+            return res.status(404).json({ message: 'Notification not found' });
+        }
+
+        res.status(200).json(notification2);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+const { sendNotification } = require('./firebase');
+app.post('/sendNotificationAPI',async (req, res) => {
+    try {
+        const { token, title, body, chatId } = req.body;
+
+        if (!token || !title || !body) {
+            return res.status(400).json({ message: "token, title, and body are required" });
+        }
+
+        const message = { title, body };
+        const result = await sendNotification(token, message, chatId);
+
+        if (result.success) {
+            return res.status(200).json({ message: "Notification sent", data: result.response });
+        } else {
+            return res.status(500).json({ message: result.message });
+        }
+    } catch (error) {
+        console.error("Unexpected error:", error);
+        return res.status(500).json({ message: "Server error" });
     }
 });
 

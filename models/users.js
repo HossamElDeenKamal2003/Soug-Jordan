@@ -7,6 +7,13 @@ const userSchema = new mongoose.Schema({
         unique: true,
         trim: true,
     },
+    countryCode: {
+        type: String,
+        default: ''
+    },
+    alternativePhonenumber: {
+        type: String,
+    },
     phoneNumber: {
         type: String,
         required: true,

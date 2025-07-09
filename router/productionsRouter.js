@@ -24,9 +24,12 @@ const {
     searchProducts,
     deleteImage,
     addImagesToPost,
-    updatePostText
+    updatePostText,
+    checkCanUpdatePost,
+    refreshPost
 } = require('../controller/productions');
 router.patch('/update-post/:id', updatePostText);
+router.post('/check-add-post', checkCanUpdatePost);
 router.delete('/delete-image/:id', deleteImage);
 router.post('/add-images/:id', upload.fields(uploadFields), addImagesToPost);
 router.post('/follow', addFollow);
@@ -38,6 +41,7 @@ router.get('/favourite/:id', myFavourite);
 router.get('/posts/:id', getPosts);
 router.get('/similar/:userId/:id', getSimilarProductsByCategory);
 router.post('/filter/:id', filterProducts);
+router.patch('/refresh/:userId/:postId', refreshPost);
 
 // Route to update a global property for all products
 router.patch('/update-global', patchGlobalProperty);

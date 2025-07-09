@@ -24,138 +24,250 @@ const handleUpload = (req, res, next) => {
       next();
     });
   };
-  const createproduct = async (req, res) => {
+const createproduct = async (req, res) => {
     try {
-      // Log request data for debugging
-      console.log('Request Body:', req.body);
-      console.log('Uploaded Files:', req.files);
-  
-      // Parse form data values and convert strings to appropriate types
-      const formData = {
-        ...req.body,
-        price: req.body.price ? parseFloat(req.body.price) : undefined,
-        numberOfrooms: req.body.numberOfrooms ? parseInt(req.body.numberOfrooms) : undefined,
-        numberOfbathrooms: req.body.numberOfbathrooms ? parseInt(req.body.numberOfbathrooms) : undefined,
-        buildingSpace: req.body.buildingSpace ? parseFloat(req.body.buildingSpace) : undefined,
-        buildingFloor: req.body.buildingFloor ? parseInt(req.body.buildingFloor) : undefined,
-        buildingAge: req.body.buildingAge ? parseInt(req.body.buildingAge) : undefined,
-        is40W: req.body.is40W === 'true',
-        global: req.body.global === 'true',
-        mafrosha: req.body.mafrosha === 'true',
-        special: req.body.special === 'true',
-        ArLocation: req.body.ArLocation || undefined,
-        metaCategory: req.body.metaCategory || undefined,
-        ArmetaLocation: req.body.ArmetaLocation || undefined,
-          floorOption: req.body.floorOption || undefined,
-          arDetails: req.body.arDetails || undefined,
-          buildingArea: req.body.buildingArea ? parseFloat(req.body.buildingArea) : undefined,
-          landArea: req.body.landArea ? parseFloat(req.body.landArea) : undefined,
-          unit: req.body.unit || undefined,
-          mileage: req.body.mileage ? parseFloat(req.body.mileage) : (
-              req.body.millage ? parseFloat(req.body.millage) : undefined
-          ),
-          nearTo: req.body.nearTo ? JSON.parse(req.body.nearTo) : [],
+        // Parse form data
+        const formData = {
+            ...req.body,
+            price: req.body.price ? parseFloat(req.body.price) : undefined,
+            numberOfrooms: req.body.numberOfrooms ? parseInt(req.body.numberOfrooms) : undefined,
+            numberOfbathrooms: req.body.numberOfbathrooms ? parseInt(req.body.numberOfbathrooms) : undefined,
+            buildingSpace: req.body.buildingSpace ? parseFloat(req.body.buildingSpace) : undefined,
+            buildingFloor: req.body.buildingFloor ? parseInt(req.body.buildingFloor) : undefined,
+            buildingAge: req.body.buildingAge ? String(req.body.buildingAge).trim() : undefined,
+            is40W: req.body.is40W === 'true',
+            global: req.body.global === 'true',
+            mafrosha: req.body.mafrosha ? String(req.body.mafrosha).trim() : undefined,
+            special: req.body.special === 'true',
+            ArLocation: req.body.ArLocation || undefined,
+            ArmetaLocation: req.body.ArmetaLocation || undefined,
+            floorOption: req.body.floorOption || undefined,
+            arDetails: req.body.arDetails || undefined,
+            buildingArea: req.body.buildingArea || undefined,
+            landArea: req.body.landArea ? parseFloat(req.body.landArea) : undefined,
+            unit: req.body.unit || undefined,
+            mileage: req.body.mileage || req.body.millage,
+            nearTo: req.body.nearTo ? JSON.parse(req.body.nearTo) : [],
+        };
 
-      };
         // Validate required fields
-      const requiredFields = ['userId', 'title', 'description', 'content'];
-      const missingFields = requiredFields.filter(field => !formData[field] || String(formData[field]).trim() === '');
-  
-      if (missingFields.length > 0) {
-        return res.status(400).json({
-          message: 'Missing required fields',
-          fields: missingFields,
-        });
-      }
-  
-      // Extract image URLs from uploaded files in parallel
-      const images = [];
-      if (req.files) {
-        // Create an array of promises for image uploads
-        const uploadPromises = Object.keys(req.files).map(async (fieldName) => {
-          const file = req.files[fieldName][0];
-          images.push(file.location); // Push the image URL to the images array
-        });
-  
-        // Wait for all uploads to complete
-        await Promise.all(uploadPromises);
-      }
-  
-      // Create product object with all possible fields
-      const productData = {
-        userId: formData.userId,
-        adNumber: formData.adNumber,
-        mileage: formData.mileage,
-        carRate: formData.carRate,
-        saleState: formData.saleState,
-        title: String(formData.title).trim(),
-        description: String(formData.description).trim(),
-        location: formData.location,
-        content: String(formData.content).trim(),
-        price: formData.price,
-        condition: formData.condition,
-        category: formData.category,
-        gearType: formData.gearType,
-        fuelType: formData.fuelType,
-        is40W: formData.is40W,
-        metaCategory: formData.metaCategory,
-        carType: formData.carType,
-        modelCar: formData.modelCar,
-        special: formData.special,
-        images,
-        global: true,
-        viewers: formData.viewers,
-        carDetails: formData.carDetails,
-        landTo: formData.landTo,
-        spaceLand: formData.spaceLand,
-        owner: formData.owner,
-        marhon: formData.marhon,
-        nearTo: formData.nearTo,
-        direction: formData.direction,
-        numberOfrooms: formData.numberOfrooms,
-        numberOfbathrooms: formData.numberOfbathrooms,
-        buildingSpace: formData.buildingSpace,
-        buildingFloor: formData.buildingFloor,
-        buildingAge: formData.buildingAge,
-        mafrosha: formData.mafrosha,
-        ArLocation: formData.ArLocation,
-        metaLocation: formData.metaLocation,
-        ArmetaLocation: formData.ArmetaLocation,
-          metaLocation: formData.metaLocation,
-          unit: formData.unit,
-          floorOption: formData.floorOption,
-          arDetails: formData.arDetails,
-          buildingArea: formData.buildingArea,
-          landArea: formData.landArea,
-      };
-  
-      // Create and save the product
-      const product = new Production(productData);
-      await product.save();
-  
-      // Populate the userId field for the response
-      const populatedProduct = await Production.findById(product._id).populate('userId', 'username email phoneNumber userFCMToken');
-  
-      // Emit real-time update if socket.io is configured
-      if (io) {
-        io.emit('new-product', { product: populatedProduct });
-      }
+        const requiredFields = ['userId', 'title', 'description', 'content'];
+        const missingFields = requiredFields.filter(field => !formData[field] || String(formData[field]).trim() === '');
+        if (missingFields.length > 0) {
+            return res.status(400).json({
+                message: 'Missing required fields',
+                fields: missingFields,
+            });
+        }
 
-      // Return success response
-      res.status(201).json({
-        message: 'Product created successfully',
-        data: populatedProduct,
-      });
+        // Validate userId
+        const { ObjectId } = require('mongoose').Types;
+        if (!ObjectId.isValid(formData.userId)) {
+            return res.status(400).json({
+                message: 'Invalid userId'
+            });
+        }
+
+        // Verify user
+        const userVerify = await User.findOne({ _id: formData.userId }).select('verified');
+        if (!userVerify) {
+            return res.status(404).json({
+                message: 'User not found'
+            });
+        }
+        if (userVerify.verified === false) {
+            return res.status(403).json({
+                message: 'User not verified'
+            });
+        }
+
+        // Extract image URLs
+        const images = [];
+        if (req.files) {
+            const uploadPromises = Object.keys(req.files).map(async (fieldName) => {
+                const file = req.files[fieldName][0];
+                images.push(file.location);
+            });
+            await Promise.all(uploadPromises);
+        }
+
+        // Create product object
+        const productData = {
+            userId: formData.userId,
+            adNumber: formData.adNumber,
+            mileage: formData.mileage,
+            carRate: formData.carRate,
+            saleState: formData.saleState,
+            title: String(formData.title).trim(),
+            description: String(formData.description).trim(),
+            location: formData.location,
+            content: String(formData.content).trim(),
+            price: formData.price,
+            condition: formData.condition,
+            category: formData.category,
+            gearType: formData.gearType,
+            fuelType: formData.fuelType,
+            is40W: formData.is40W,
+            metaCategory: formData.metaCategory,
+            carType: formData.carType,
+            modelCar: formData.modelCar,
+            special: formData.special,
+            images,
+            global: true,
+            viewers: formData.viewers,
+            carDetails: formData.carDetails,
+            landTo: formData.landTo,
+            spaceLand: formData.spaceLand,
+            owner: formData.owner,
+            marhon: formData.marhon,
+            nearTo: formData.nearTo,
+            direction: formData.direction,
+            numberOfrooms: formData.numberOfrooms,
+            numberOfbathrooms: formData.numberOfbathrooms,
+            buildingSpace: formData.buildingSpace,
+            buildingFloor: formData.buildingFloor,
+            buildingAge: formData.buildingAge,
+            mafrosha: formData.mafrosha,
+            ArLocation: formData.ArLocation,
+            metaLocation: formData.metaLocation,
+            ArmetaLocation: formData.ArmetaLocation,
+            unit: formData.unit,
+            floorOption: formData.floorOption,
+            arDetails: formData.arDetails,
+            buildingArea: formData.buildingArea,
+            landArea: formData.landArea,
+        };
+
+        // Create and save the product
+        const product = new Production(productData);
+        await product.save();
+
+        // Populate userId field
+        const populatedProduct = await Production.findById(product._id).populate('userId', 'username email phoneNumber userFCMToken');
+
+        // Emit real-time update
+        if (io) {
+            io.emit('new-product', { product: populatedProduct });
+        }
+
+        // Return success response
+        return res.status(201).json({
+            message: 'Product created successfully',
+            data: populatedProduct,
+        });
     } catch (error) {
-      console.error('Error creating product:', error);
-      res.status(500).json({
-        message: 'Internal Server Error',
-        error: error.message,
-      });
+        console.error('Error creating product:', error);
+        return res.status(500).json({
+            message: 'Internal Server Error',
+            error: error.message,
+        });
     }
-  };
+};
+function generateRandomOtp(){
+    return Math.floor(1000 + Math.random() * 9000);
+}
 
-// Add to Favourite
+const sendOtp = async (phoneNumber) => {
+    try {
+        const otp = generateRandomOtp();
+        console.log('Generated OTP:', otp, 'Sending to:', phoneNumber);
+
+        const send = await sendMessage(phoneNumber, `Your OTP is: ${otp}`);
+        console.log('Send OTP result:', send);
+        const updateOtp = await User.findOneAndUpdate(
+            { phoneNumber },
+            { otp: otp },
+            { new: true }
+        );
+        if(!updateOtp){
+            return res.status(400).json({
+                message: "Error When Update User Otp"
+            })
+        }
+        return send;
+    } catch (err) {
+        console.error('Error in sendOtp:', err);
+    }
+};
+
+const checkCanUpdatePost = async (req, res) => {
+    const { userId, type } = req.body;
+
+    // Input validation
+    // if (!userId || !type) {
+    //     return res.status(400).json({
+    //         canUpdate: false,
+    //         message: 'Missing userId or type',
+    //     });
+    // }
+
+    try {
+        // Verify user
+        const userVerify = await User.findOne({ _id: userId }).select('verified phoneNumber');
+        if (!userVerify) {
+            return res.status(400).json({
+                canUpdate: false,
+                message: 'User not found',
+            });
+        }
+        if (!userVerify.verified) {
+            await sendOtp(userVerify.phoneNumber); // Send OTP to unverified user
+            return res.status(400).json({
+                canUpdate: false,
+                message: 'User not verified. OTP sent to your phone.',
+            });
+        }
+
+        // Find the most recent post
+        const post = await Production.findOne({ userId }).sort({ createdAt: -1 });
+        if (!post) {
+            return res.status(200).json({
+                canUpdate: true,
+                message: 'You can add the post now.',
+            });
+        }
+
+        // Determine timestamp field
+        const timestampField = type === 'add' ? 'lastPostTimeAdded' : 'createdAt';
+        if (!post[timestampField]) {
+            return res.status(500).json({
+                canUpdate: false,
+                message: `Invalid timestamp field: ${timestampField}`,
+            });
+        }
+
+        const postCreatedAt = new Date(post[timestampField]);
+        if (isNaN(postCreatedAt)) {
+            return res.status(500).json({
+                canUpdate: false,
+                message: 'Invalid post timestamp',
+            });
+        }
+
+        const now = new Date();
+        const diffInMs = now - postCreatedAt;
+        const diffInHours = diffInMs / (1000 * 60 * 60);
+
+        if (diffInHours < 24) {
+            const hoursLeft = (24 - diffInHours).toFixed(2);
+            return res.status(400).json({
+                canUpdate: false,
+                message: `You can add this post after ${hoursLeft} hour(s).`,
+            });
+        }
+
+        return res.status(200).json({
+            canUpdate: true,
+            message: 'You can add the post now.',
+        });
+    } catch (error) {
+        console.error('Error in checkCanUpdatePost:', error);
+        return res.status(500).json({
+            canUpdate: false,
+            message: 'Internal server error',
+        });
+    }
+};// Add to Favourite
 const addFavourite = async (req, res) => {
     const { userId, productId } = req.body;
     try {
@@ -188,6 +300,9 @@ const myFavourite = async (req, res) => {
         return res.status(500).json({ message: 'Failed to retrieve favourites', error: error.message });
     }
 };
+
+
+
 const getPosts = async (req, res) => {
     let userId = req.params.id;
     const page = parseInt(req.query.page) || 1; // Default page is 1
@@ -205,7 +320,7 @@ const getPosts = async (req, res) => {
         .skip(skip)
         .limit(limit)
         .populate('userId', 'username email phoneNumber userFCMToken') // Populate user details
-        .sort({ _id: -1 })  // Sort by _id in descending order
+            .sort({ createdAt: -1 })  // ✅ Sort by creation date in descending order
         .lean(); // Lean to return plain objects
 
         // Fetch the user's favourite products
@@ -246,6 +361,71 @@ const getPosts = async (req, res) => {
         return res.status(500).json({ message: 'Failed to retrieve products', error: error.message });
     }
 };
+
+const canUpdate = async (userId, postId) => {
+    try {
+        const post = await Production.findOne({ _id: postId }).select("userId");
+        if (!post) throw new Error("Post not found");
+
+        if (post.userId.toString() !== userId.toString()) {
+            return {
+                canUpdate: false,
+                message: "You are not authorized to update this post."
+            };
+        }
+
+        return {
+            canUpdate: true,
+            message: "You can update the post now."
+        };
+    } catch (error) {
+        console.log(error);
+        throw error;
+    }
+};
+
+
+const refreshPost = async (req, res) => {
+    const { userId, postId } = req.params;
+
+    try {
+        const post = await Production.findOne({ _id: postId, userId });
+
+        if (!post) {
+            return res.status(404).json({ success: false, message: "Post not found or unauthorized." });
+        }
+
+        const now = new Date();
+        const createdAt = new Date(post.createdAt);
+        const diffInMs = now - createdAt;
+        const diffInHours = diffInMs / (1000 * 60 * 60);
+
+        if (diffInHours < 24) {
+            const hoursLeft = (24 - diffInHours).toFixed(2);
+            return res.status(403).json({
+                success: false,
+                message: `You can refresh this post after ${hoursLeft} hour(s).`
+            });
+        }
+
+        const updatedPost = await Production.findByIdAndUpdate(
+            postId,
+            { createdAt: now },
+            { new: true }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Post refreshed successfully.",
+            post: updatedPost
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 
 const getSimilarProductsByCategory = async (req, res) => {
     const id = req.params.id; // Post ID
@@ -302,7 +482,7 @@ const getSimilarProductsByCategory = async (req, res) => {
             metaCategory: post.metaCategory,
             _id: { $ne: id }
         }).limit(10);
-
+        const canUpdateProp = await canUpdate(userId, id);
         res.status(200).json({
             post: {
                 ...post._doc,
@@ -311,6 +491,8 @@ const getSimilarProductsByCategory = async (req, res) => {
                 isSeen // Add the `isSeen` property to the response
             },
             user: user || null,
+            canUpdate: canUpdateProp.canUpdate,
+            updateMessage: canUpdateProp.updateMessage,
             similar: similarPosts
         });
     } catch (error) {
@@ -422,6 +604,20 @@ const filterProducts = async (req, res) => {
 
         // Calculate skip for pagination
         const skip = (pageNumber - 1) * limit;
+// Trim string values from filters
+        for (const key in filters) {
+            const val = filters[key];
+            if (typeof val === 'string') {
+                filters[key] = val.trim();
+            }
+            if (typeof val === 'object' && val !== null) {
+                for (const subKey in val) {
+                    if (typeof val[subKey] === 'string') {
+                        val[subKey] = val[subKey].trim();
+                    }
+                }
+            }
+        }
 
         // Build the query dynamically based on the filters provided
         const query = buildQuery(filters);
@@ -626,27 +822,37 @@ const updatePrivacy = async (req, res) => {
 };
 
 const updatePostText = async (req, res) => {
-    const { id } = req.params; // Corrected this line
+    const { id } = req.params;
     const updates = req.body;
+
     try {
+        // Append current time to updatedAtHistory and apply updates
         const updatePost = await Production.findByIdAndUpdate(
             id,
-            { $set: updates },
+            {
+                $set: { ...updates, updatedAt: new Date() }, // Explicitly update updatedAt
+                $push: { updatedAtHistory: new Date() }      // Push to history array
+            },
             { new: true }
         );
+
         if (!updatePost) {
             return res.status(400).json({ message: "Failed To Update Product" });
         }
+
         return res.status(200).json({ message: "Post Updated Successfully", post: updatePost });
+
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: error.message });
     }
 };
 
+
 require('dotenv').config();
 
 const AWS = require('aws-sdk');
+const {sendMessage} = require("./verifyOtp");
 AWS.config.update({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -696,46 +902,46 @@ const deleteImage = async (req, res) => {
     }
   };
 
-  const addImagesToPost = async (req, res) => {
-    const { id: postId } = req.params; // Destructure postId from URL parameters
-    const images = req.files; // Get the uploaded files from req.files
-  
-    console.log('Uploaded Files:', images); // Log the uploaded files for debugging
-  
+const addImagesToPost = async (req, res) => {
+    const { id: postId } = req.params;
+    const images = req.files;
+
+    console.log('Uploaded Files:', images);
+
     try {
-      // Validate if files were uploaded
-      if (!images || Object.keys(images).length === 0) {
-        return res.status(400).json({ message: 'No files uploaded' });
-      }
-  
-      // Find the post by ID
-      const post = await Production.findById(postId);
-      if (!post) {
-        return res.status(404).json({ message: 'Post not found' });
-      }
-  
-      // Extract image URLs from uploaded files
-      const imageLocations = [];
-      for (const fieldName in images) {
-        if (images[fieldName]) {
-          images[fieldName].forEach(file => {
-            imageLocations.push(file.location); // Assuming file.location contains the S3 URL
-          });
+        if (!images || Object.keys(images).length === 0) {
+            return res.status(400).json({ message: 'No files uploaded' });
         }
-      }
-  
-      // Add the new image URLs to the post's images array
-      post.images.push(...imageLocations); // Spread to push each location individually
-  
-      // Save the updated post
-      await post.save();
-  
-      res.status(200).json({ message: 'Images added successfully', post });
+
+        const post = await Production.findById(postId);
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+
+        const imageLocations = [];
+        for (const fieldName in images) {
+            if (images[fieldName]) {
+                images[fieldName].forEach(file => {
+                    imageLocations.push(file.location);
+                });
+            }
+        }
+
+        post.images.push(...imageLocations);
+
+        // Push update timestamp
+        const now = new Date();
+        post.updatedAt = now; // Override updatedAt manually
+        post.updatedAtHistory.push(now); // Push to history
+
+        await post.save();
+
+        res.status(200).json({ message: 'Images added successfully', post });
     } catch (error) {
-      console.error('Error adding images:', error.message);
-      res.status(500).json({ message: 'Failed to add images', error: error.message });
+        console.error('Error adding images:', error.message);
+        res.status(500).json({ message: 'Failed to add images', error: error.message });
     }
-  };
+};
 // Export Controllers
 module.exports = {
     createproduct,
@@ -754,5 +960,7 @@ module.exports = {
     searchProducts,
     updatePostText,
     deleteImage,
-    addImagesToPost
+    addImagesToPost,
+    checkCanUpdatePost,
+    refreshPost
 };

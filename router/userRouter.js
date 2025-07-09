@@ -19,6 +19,7 @@ const {
     updateProfileImage,
     resetPassword,
     verifyOtp,
+    updateFcmtoken,
     handleSingleUpload
 } = require('../controller/userController'); // Ensure file name case matches
 const { upload } = require('../middlewares/files');
@@ -44,4 +45,5 @@ router.get('/getFollow/:id', getFollow);
 router.delete('/deleteFollow', deleteFollow);
 router.post('/resetPassword', resetPassword);
 router.post('/verify', verifyOtp);
+router.patch('/updateFcmtoken', updateFcmtoken);
 module.exports = router;

@@ -186,55 +186,58 @@ const normalizePhoneNumber = (phoneNumber) => {
     const validateLength = (number, expectedLength) =>
         number.length === expectedLength;
 
-    // Egypt (country code: +20)
+    // Egypt (+20)
     if (cleanedNumber.startsWith('20')) {
-        // International format (+20 XXXXXXXXXX)
         if (validateLength(cleanedNumber, 12)) {
             return cleanedNumber;
         }
     } else if (
-        // Local formats:
-        // 0XXXXXXXXXX (11 digits) or 10XXXXXXXX (10 digits)
         (cleanedNumber.startsWith('0') && validateLength(cleanedNumber, 11)) ||
         (cleanedNumber.startsWith('10') && validateLength(cleanedNumber, 10))
     ) {
         return '20' + cleanedNumber.slice(cleanedNumber.startsWith('0') ? 1 : 2);
     }
 
-    // Jordan (country code: +962)
+    // Jordan (+962)
     if (cleanedNumber.startsWith('962')) {
-        // International format (+962 7XXXXXXXX)
         if (validateLength(cleanedNumber, 12) && cleanedNumber[3] === '7') {
             return cleanedNumber;
         }
     } else if (
-        // Local formats:
-        // 7XXXXXXXX (9 digits) or 07XXXXXXXX (10 digits)
         (cleanedNumber.startsWith('7') && validateLength(cleanedNumber, 9)) ||
         (cleanedNumber.startsWith('07') && validateLength(cleanedNumber, 10))
     ) {
         return '962' + cleanedNumber.slice(cleanedNumber.startsWith('07') ? 1 : 0);
     }
 
-    // Saudi Arabia (country code: +966)
+    // Saudi Arabia (+966)
     if (cleanedNumber.startsWith('966')) {
-        // International format (+966 5XXXXXXXX)
         if (validateLength(cleanedNumber, 12) && cleanedNumber[3] === '5') {
             return cleanedNumber;
         }
     } else if (
-        // Local formats:
-        // 5XXXXXXXX (9 digits) or 05XXXXXXXX (10 digits)
         (cleanedNumber.startsWith('5') && validateLength(cleanedNumber, 9)) ||
         (cleanedNumber.startsWith('05') && validateLength(cleanedNumber, 10))
     ) {
         return '966' + cleanedNumber.slice(cleanedNumber.startsWith('05') ? 1 : 0);
     }
 
-    // If none of the patterns match
+    // United Arab Emirates (+971)
+    if (cleanedNumber.startsWith('971')) {
+        if (validateLength(cleanedNumber, 12) && cleanedNumber[3] === '5') {
+            return cleanedNumber;
+        }
+    } else if (
+        (cleanedNumber.startsWith('5') && validateLength(cleanedNumber, 9)) ||
+        (cleanedNumber.startsWith('05') && validateLength(cleanedNumber, 10))
+    ) {
+        return '971' + cleanedNumber.slice(cleanedNumber.startsWith('05') ? 1 : 0);
+    }
+
+    // If none match
     return null;
 };
-// null
+
 // Update profile image
 const updateProfileImage = async (req, res) => {
   const { userId } = req.body;
@@ -368,19 +371,19 @@ const login = async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        // Check if user is verified
-        if (user.verified === false) {
-            return res.status(403).json({
-                message: 'Account not verified. Please verify your account.'
-            });
-        }
-
-        // Check if user is blocked
-        if (user.block === true) {
-            return res.status(403).json({
-                message: 'Account blocked. Please contact support.'
-            });
-        }
+        // // Check if user is verified
+        // if (user.verified === false) {
+        //     return res.status(403).json({
+        //         message: 'Account not verified. Please verify your account.'
+        //     });
+        // }
+        //
+        // // Check if user is blocked
+        // if (user.block === true) {
+        //     return res.status(403).json({
+        //         message: 'Account blocked. Please contact support.'
+        //     });
+        // }
 
         // Verify password
         const validPassword = await bcrypt.compare(password, user.password);
@@ -682,6 +685,27 @@ const verifyOtp = async (req, res) => {
     }
 };
 
+const updateFcmtoken = async(req, res)=>{
+    const {
+        userId,
+        token
+    } = req.body;
+    try{
+        const updateUserToken = await User.findOneAndUpdate(
+            { _id: userId },
+            {userFCMToken: token},
+            {new: true}
+        );
+        if(!updateUserToken){
+            return res.status(400).json({message: 'Error While update token'});
+        }
+        return res.status(200).json({message: "user fcm token updated successfully"});
+    }catch(error){
+        console.log(error);
+        return res.status(500).json({message: error.message});
+    }
+}
+
 module.exports = {
   register,
   login,
@@ -702,5 +726,6 @@ module.exports = {
   updateProfileImage,
   handleSingleUpload,
     resetPassword,
-    verifyOtp
+    verifyOtp,
+    updateFcmtoken
 };
